@@ -108,27 +108,42 @@
       <div class="footer">
         <div class="row small" style="margin-top:10px">
           <span class="pill">Target: <span id="targetText">Mar 27, 2026 @ 10:00 AM CT</span></span>
-          <span class="pill">Status: <span id="status">C</p>
+          <span class="pill">Status: <span id="status">Counting…</span></span>
+        </div>
+        <p class="small" id="tzDebug" style="margin-top:8px"></p>
+        <p class="small" style="margin-top:12px">Tip: Host this as a static file (GitHub Pages / Netlify / Cloudflare Pages) and share the link in Discord.</p></p>
       </div>
     </div>
   </main>
   <script>
     // === CONFIG ===
-    // C2E2 2026 show opens Friday, March 27, 2026. Using 10:00 AM America/Chicago (CDT, UTC-05).
-    // If you need to change it, edit the ISO string below.
-    const TARGET_ISO = "2026-03-27T15:00:00Z"; // 10:00 AM America/Chicago converted to UTC (CDT -> 15:00Z)
+    // Robust: build target based on "10:00 AM America/Chicago" without relying on manual offsets
+    const TARGET_LOCAL = { y: 2026, m: 3, d: 27, hh: 10, mm: 0, ss: 0 };
+    const TARGET_TZ = 'America/Chicago';
 
-    // Pretty target string for UI
+    // Convert a wall-clock time in a specific IANA TZ to a UTC epoch reliably
+    function zonedTimeToUtcEpoch({ y, m, d, hh, mm, ss }, timeZone){
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        year:'numeric', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+      }).formatToParts(new Date(Date.UTC(y, m-1, d, hh, mm, ss)));
+      const map = Object.fromEntries(parts.map(p => [p.type, p.value]));
+      // This gives us the *same* local wall-time in the target TZ; build a UTC timestamp from it
+      const utc = Date.UTC(Number(map.year), Number(map.month)-1, Number(map.day), Number(map.hour), Number(map.minute), Number(map.second));
+      return utc;
+    }
+
+    const targetEpoch = zonedTimeToUtcEpoch(TARGET_LOCAL, TARGET_TZ);
+
+    // Pretty target string (always display in Chicago time for clarity)
     function formatTarget(ts){
       try {
-        // Always display the target in Chicago time so there's no confusion
         return new Intl.DateTimeFormat(undefined, {
           year:'numeric', month:'short', day:'2-digit',
           hour:'numeric', minute:'2-digit', hour12:true,
-          timeZone:'America/Chicago', timeZoneName:'short'
+          timeZone: TARGET_TZ, timeZoneName:'short'
         }).format(new Date(ts));
-      } catch(e){ return ts; }
-    });
       } catch(e){ return ts; }
     }
 
@@ -138,23 +153,22 @@
     const $s = document.getElementById('secs');
     const $status = document.getElementById('status');
     const $targetText = document.getElementById('targetText');
+    const $tzDebug = document.getElementById('tzDebug');
 
-    $targetText.textContent = formatTarget(TARGET_ISO).replace(':00 ', ' ');
-
-    let target = new Date(TARGET_ISO).getTime();
+    $targetText.textContent = formatTarget(targetEpoch).replace(':00 ', ' ');
 
     function pad(n){ return String(n).padStart(2,'0'); }
 
     function tick(){
       const now = Date.now();
-      let diff = Math.max(0, target - now);
+      let diff = Math.max(0, targetEpoch - now);
 
-      const days = Math.floor(diff / (1000*60*60*24));
-      diff -= days * (1000*60*60*24);
-      const hours = Math.floor(diff / (1000*60*60));
-      diff -= hours * (1000*60*60);
-      const mins = Math.floor(diff / (1000*60));
-      diff -= mins * (1000*60);
+      const days = Math.floor(diff / 86400000);
+      diff -= days * 86400000;
+      const hours = Math.floor(diff / 3600000);
+      diff -= hours * 3600000;
+      const mins = Math.floor(diff / 60000);
+      diff -= mins * 60000;
       const secs = Math.floor(diff / 1000);
 
       $d.textContent = days;
@@ -162,11 +176,18 @@
       $m.textContent = pad(mins);
       $s.textContent = pad(secs);
 
-      if (target - now <= 0){
-        $status.textContent = 'It\'s C2E2 time!';
+      if (targetEpoch - now <= 0){
+        $status.textContent = "It's C2E2 time!";
         clearInterval(timer);
       }
     }
+
+    // Debug footer so we can verify client assumptions quickly
+    try {
+      const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown TZ';
+      const nowChicago = new Intl.DateTimeFormat(undefined, { timeZone: TARGET_TZ, hour:'2-digit', minute:'2-digit', hour12:true, timeZoneName:'short' }).format(new Date());
+      $tzDebug.textContent = `Your timezone: ${tzName}. Chicago now: ${nowChicago}. Target shown in Chicago time.`;
+    } catch {}
 
     const timer = setInterval(tick, 1000);
     tick();
