@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>C2E2 Countdown — NO, BADGES ARE NOT ON SALE YET</title>
+  <!-- Social preview -->
+  <meta property="og:title" content="C2E2 Countdown" />
+  <meta property="og:description" content="NO — BADGES ARE NOT ON SALE YET. Countdown to C2E2." />
+  <meta name="theme-color" content="#111827" />
+  <style>
+    :root{
+      --bg:#0b1020; /* deep navy */
+      --fg:#e5e7eb; /* light */
+      --muted:#94a3b8; /* slate */
+      --accent:#ef4444; /* red */
+      --card:#111827; /* gray-900 */
+      --ring:#374151; /* gray-700 */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 50% -20%, #1f2937 0%, var(--bg) 45%);
+      color:var(--fg);
+      display:grid;
+      place-items:center;
+      padding:24px;
+    }
+    .wrap{
+      width:min(920px, 100%);
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border:1px solid var(--ring);
+      border-radius:24px;
+      padding:28px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.03);
+    }
+    h1{
+      margin:0 0 8px;
+      font-weight:800;
+      letter-spacing:0.2px;
+      font-size: clamp(28px, 4vw, 40px);
+      text-align:center;
+    }
+    .sub{
+      text-align:center;
+      color:var(--muted);
+      margin-bottom:18px;
+    }
+    .alert{
+      margin: 12px auto 22px;
+      display:inline-block;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:0.6px;
+      background: rgba(239,68,68,0.15);
+      color:#fecaca;
+      border:1px solid rgba(239,68,68,0.75);
+      border-radius:12px;
+      padding:10px 14px;
+      box-shadow: inset 0 0 12px rgba(239,68,68,0.25);
+    }
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap:14px;
+      margin: 12px 0 4px;
+    }
+    .unit{
+      background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+      border:1px solid var(--ring);
+      border-radius:20px;
+      padding:18px 14px;
+      text-align:center;
+    }
+    .num{
+      font-variant-numeric: tabular-nums;
+      font-weight:900;
+      line-height:1;
+      font-size: clamp(42px, 10vw, 96px);
+      letter-spacing: -1px;
+    }
+    .label{ color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:1px; font-size:12px; }
+    .footer{ color:var(--muted); text-align:center; margin-top:18px; font-size:14px; }
+    .pill{ display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--ring); border-radius:999px; }
+    .small{ font-size:12px; }
+    .row{ display:flex; justify-content:center; gap:10px; flex-wrap:wrap; }
+    .kbd{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#0d1117; color:#9ecbff; border:1px solid #1f2937; padding:2px 6px; border-radius:6px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="card">
+      <h1>C2E2 Countdown</h1>
+      <p class="sub">Chicago — McCormick Place • March 27–29, 2026</p>
+      <div class="row" style="justify-content:center">
+        <div class="alert"><strong>NO — BADGES ARE NOT ON SALE YET</strong></div>
+      </div>
+      <section class="grid" aria-live="polite" aria-atomic="true">
+        <div class="unit"><div class="num" id="days">–</div><div class="label">Days</div></div>
+        <div class="unit"><div class="num" id="hours">–</div><div class="label">Hours</div></div>
+        <div class="unit"><div class="num" id="mins">–</div><div class="label">Minutes</div></div>
+        <div class="unit"><div class="num" id="secs">–</div><div class="label">Seconds</div></div>
+      </section>
+      <div class="footer">
+        <div class="row small" style="margin-top:10px">
+          <span class="pill">Target: <span id="targetText">Mar 27, 2026 @ 10:00 AM CT</span></span>
+          <span class="pill">Status: <span id="status">Counting…</span></span>
+        </div>
+        <p class="small" style="margin-top:12px">Tip: Host this as a static file (GitHub Pages / Netlify / Cloudflare Pages) and share the link in Discord.</p>
+      </div>
+    </div>
+  </main>
+  <script>
+    // === CONFIG ===
+    // C2E2 2026 show opens Friday, March 27, 2026. Using 10:00 AM America/Chicago (CDT, UTC-05).
+    // If you need to change it, edit the ISO string below.
+    const TARGET_ISO = "2026-03-27T10:00:00-05:00"; // local Chicago time with offset
+
+    // Pretty target string for UI
+    function formatTarget(ts){
+      try {
+        return new Date(ts).toLocaleString(undefined, { year:'numeric', month:'short', day:'2-digit', hour:'numeric', minute:'2-digit', hour12:true, timeZoneName:'short' });
+      } catch(e){ return ts; }
+    }
+
+    const $d = document.getElementById('days');
+    const $h = document.getElementById('hours');
+    const $m = document.getElementById('mins');
+    const $s = document.getElementById('secs');
+    const $status = document.getElementById('status');
+    const $targetText = document.getElementById('targetText');
+
+    $targetText.textContent = formatTarget(TARGET_ISO).replace(':00 ', ' ');
+
+    let target = new Date(TARGET_ISO).getTime();
+
+    function pad(n){ return String(n).padStart(2,'0'); }
+
+    function tick(){
+      const now = Date.now();
+      let diff = Math.max(0, target - now);
+
+      const days = Math.floor(diff / (1000*60*60*24));
+      diff -= days * (1000*60*60*24);
+      const hours = Math.floor(diff / (1000*60*60));
+      diff -= hours * (1000*60*60);
+      const mins = Math.floor(diff / (1000*60));
+      diff -= mins * (1000*60);
+      const secs = Math.floor(diff / 1000);
+
+      $d.textContent = days;
+      $h.textContent = pad(hours);
+      $m.textContent = pad(mins);
+      $s.textContent = pad(secs);
+
+      if (target - now <= 0){
+        $status.textContent = 'It\'s C2E2 time!';
+        clearInterval(timer);
+      }
+    }
+
+    const timer = setInterval(tick, 1000);
+    tick();
+  </script>
+</body>
+</html>
