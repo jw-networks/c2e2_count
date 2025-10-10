@@ -116,35 +116,19 @@
     </div>
   </main>
   <script>
-    // === CONFIG ===
-    // Robust: build target based on "10:00 AM America/Chicago" without relying on manual offsets
-    const TARGET_LOCAL = { y: 2026, m: 3, d: 27, hh: 10, mm: 0, ss: 0 };
-    const TARGET_TZ = 'America/Chicago';
+    // === CONFIG (final, robust) ===
+    // Target instant expressed unambiguously in UTC (Z). 10:00 AM Chicago on Mar 27, 2026 is 15:00 UTC.
+    const TARGET_UTC_ISO = '2026-03-27T15:00:00Z';
+    const TARGET_EPOCH = Date.parse(TARGET_UTC_ISO);
+    const CHICAGO_TZ = 'America/Chicago';
 
-    // Convert a wall-clock time in a specific IANA TZ to a UTC epoch reliably
-    function zonedTimeToUtcEpoch({ y, m, d, hh, mm, ss }, timeZone){
-      const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone,
-        year:'numeric', month:'2-digit', day:'2-digit',
-        hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
-      }).formatToParts(new Date(Date.UTC(y, m-1, d, hh, mm, ss)));
-      const map = Object.fromEntries(parts.map(p => [p.type, p.value]));
-      // This gives us the *same* local wall-time in the target TZ; build a UTC timestamp from it
-      const utc = Date.UTC(Number(map.year), Number(map.month)-1, Number(map.day), Number(map.hour), Number(map.minute), Number(map.second));
-      return utc;
-    }
-
-    const targetEpoch = zonedTimeToUtcEpoch(TARGET_LOCAL, TARGET_TZ);
-
-    // Pretty target string (always display in Chicago time for clarity)
-    function formatTarget(ts){
-      try {
-        return new Intl.DateTimeFormat(undefined, {
-          year:'numeric', month:'short', day:'2-digit',
-          hour:'numeric', minute:'2-digit', hour12:true,
-          timeZone: TARGET_TZ, timeZoneName:'short'
-        }).format(new Date(ts));
-      } catch(e){ return ts; }
+    // Utility: format a timestamp in any IANA time zone
+    function fmt(ts, tz){
+      return new Intl.DateTimeFormat(undefined, {
+        year:'numeric', month:'short', day:'2-digit',
+        hour:'numeric', minute:'2-digit', hour12:true,
+        timeZone: tz, timeZoneName:'short'
+      }).format(new Date(ts));
     }
 
     const $d = document.getElementById('days');
@@ -155,13 +139,15 @@
     const $targetText = document.getElementById('targetText');
     const $tzDebug = document.getElementById('tzDebug');
 
-    $targetText.textContent = formatTarget(targetEpoch).replace(':00 ', ' ');
+    // Show target in Chicago and the viewer's local time
+    const viewerTZ = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Local';
+    $targetText.textContent = `${fmt(TARGET_EPOCH, CHICAGO_TZ)} (Chicago)`;
 
     function pad(n){ return String(n).padStart(2,'0'); }
 
     function tick(){
       const now = Date.now();
-      let diff = Math.max(0, targetEpoch - now);
+      let diff = Math.max(0, TARGET_EPOCH - now);
 
       const days = Math.floor(diff / 86400000);
       diff -= days * 86400000;
@@ -176,17 +162,22 @@
       $m.textContent = pad(mins);
       $s.textContent = pad(secs);
 
-      if (targetEpoch - now <= 0){
+      if (TARGET_EPOCH - now <= 0){
         $status.textContent = "It's C2E2 time!";
         clearInterval(timer);
       }
     }
 
-    // Debug footer so we can verify client assumptions quickly
+    // Helpful debug so we can verify what the client sees
     try {
-      const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Unknown TZ';
-      const nowChicago = new Intl.DateTimeFormat(undefined, { timeZone: TARGET_TZ, hour:'2-digit', minute:'2-digit', hour12:true, timeZoneName:'short' }).format(new Date());
-      $tzDebug.textContent = `Your timezone: ${tzName}. Chicago now: ${nowChicago}. Target shown in Chicago time.`;
+      const now = Date.now();
+      const tzName = viewerTZ;
+      const chicagoNow = fmt(now, CHICAGO_TZ);
+      const viewerNow = fmt(now, tzName);
+      const targetChicago = fmt(TARGET_EPOCH, CHICAGO_TZ);
+      const targetViewer = fmt(TARGET_EPOCH, tzName);
+      const hoursLeft = Math.round((TARGET_EPOCH - now)/3600000*10)/10;
+      $tzDebug.textContent = `Your TZ: ${tzName}. Now: ${viewerNow}. Chicago now: ${chicagoNow}. Target: ${targetChicago} / ${targetViewer}. ~${hoursLeft}h left.`;
     } catch {}
 
     const timer = setInterval(tick, 1000);
