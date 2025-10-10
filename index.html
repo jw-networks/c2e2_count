@@ -108,9 +108,7 @@
       <div class="footer">
         <div class="row small" style="margin-top:10px">
           <span class="pill">Target: <span id="targetText">Mar 27, 2026 @ 10:00 AM CT</span></span>
-          <span class="pill">Status: <span id="status">Counting…</span></span>
-        </div>
-        <p class="small" style="margin-top:12px">Pssst: Go Ping Fallen on the forums and ask if badges are released for C2</p>
+          <span class="pill">Status: <span id="status">C</p>
       </div>
     </div>
   </main>
@@ -118,13 +116,19 @@
     // === CONFIG ===
     // C2E2 2026 show opens Friday, March 27, 2026. Using 10:00 AM America/Chicago (CDT, UTC-05).
     // If you need to change it, edit the ISO string below.
-    const TARGET_ISO = "2026-03-27T15:00:00Z";
-
+    const TARGET_ISO = "2026-03-27T15:00:00Z"; // 10:00 AM America/Chicago converted to UTC (CDT -> 15:00Z)
 
     // Pretty target string for UI
     function formatTarget(ts){
       try {
-        return new Date(ts).toLocaleString(undefined, { year:'numeric', month:'short', day:'2-digit', hour:'numeric', minute:'2-digit', hour12:true, timeZoneName:'short' });
+        // Always display the target in Chicago time so there's no confusion
+        return new Intl.DateTimeFormat(undefined, {
+          year:'numeric', month:'short', day:'2-digit',
+          hour:'numeric', minute:'2-digit', hour12:true,
+          timeZone:'America/Chicago', timeZoneName:'short'
+        }).format(new Date(ts));
+      } catch(e){ return ts; }
+    });
       } catch(e){ return ts; }
     }
 
